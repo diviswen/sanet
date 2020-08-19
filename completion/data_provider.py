@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+sys.path.append('../utils')
 import numpy as np
 import h5py
 import time
@@ -9,23 +12,6 @@ import os
 import glob
 
 
-def load_completion_data_benchmark(path, batch_size, npoint=2048):
-    test = []
-    test_list = open(os.path.join(path, 'test.list'), 'r')
-    for f in test_list:
-        filename = f[4:-1] + '.h5'
-        pcd_file = h5py.File(os.path.join(path, 'test/partial', 'all', filename), 'r')
-        pcd = np.array(pcd_file['data'])
-        pcd_file.close()
-        test.append(pcd.astype(np.float64))
-    test = np.array(test)
-    batch_test = []
-    i = 0
-    while i+batch_size <= test.shape[0]:
-        batch_test.append(test[i:i+batch_size])
-        i += batch_size
-    print(test.shape)
-    return np.array(batch_test)
 
 def load_data(path, batch_size, categories, npoint=2048):
     encode = {
@@ -269,9 +255,9 @@ def nonuniform_sampling(num, sample_num = 8000):
 
 if __name__ == '__main__':
     from datetime import datetime
-    DATA_PATH = '/data/wjc/shapenet'
+    DATA_PATH = '../data/shapenet_completion'
 
-    for ct in ['chair', 'table', 'sofa', 'cabinet', 'lamp', 'car', 'plane', 'watercraft', 'all']:
+    for ct in ['chair', 'table', 'sofa', 'cabinet', 'lamp', 'car', 'plane', 'watercraft']:
         print '\n\n', str(datetime.now())
         TRAIN_DATASET, TRAIN_DATASET_GT, TEST_DATASET, TEST_DATASET_GT, TEST_DATASET_CATEGORY = load_data(DATA_PATH, 16, ct, npoint=2048)
         print 'category: ', ct

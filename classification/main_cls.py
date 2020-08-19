@@ -8,28 +8,31 @@ import importlib
 import random
 import numpy as np
 import tensorflow as tf
-import modelnet_dataset
-import modelnet_h5_dataset
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append('../utils')
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append('../')
+sys.path.append('../utils')
+import modelnet_dataset
+import modelnet_h5_dataset
+
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', default='model_l2h_cls', help='Model name [default: model_l2h]')
+parser.add_argument('--model', default='sanet_cls', help='Model name [default: model_l2h]')
 parser.add_argument('--log_dir', default='logs', help='Log dir [default: logs]')
 parser.add_argument('--num_point', type=int, default=1024, help='Point Number [1024/2048] [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=400, help='Epoch to run [default: 400]')
 parser.add_argument('--min_epoch', type=int, default=0, help='Epoch from which training starts [default: 0]')
-parser.add_argument('--batch_size', type=int, default=16, help='Batch Size during training [default: 16]')
+parser.add_argument('--batch_size', type=int, default=2, help='Batch Size during training [default: 16]')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='Initial learning rate [default: 0.001]')
-parser.add_argument('--decay_step', type=int, default=100000, help='Decay step for lr decay [default: 200000]')
+parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
-parser.add_argument('--weight_decay', type=float, default=0.007, help='Weight decay [default: 0.007]')
+parser.add_argument('--weight_decay', type=float, default=0.00001, help='Weight decay [default: 0.007]')
 parser.add_argument('--warmup_step', type=int, default=1000, help='Warm up step for lr [default: 200000]')
 parser.add_argument('--gamma_cd', type=float, default=10.0, help='Gamma for chamfer loss [default: 10.0]')
-parser.add_argument('--restore', default='None', help='Restore path [default: None]')
+parser.add_argument('--restore', default='/data/wenxin/pointnet2/logs/model_l2h_cls_1110-002741-modelnet40-tilegrid/checkpoints', help='Restore path [default: None]')
 parser.add_argument('--augment_scale', type=float, default=0.0, help='Random scale, range 1.0/scale ~ scale [default: 0.0]')
 parser.add_argument('--augment_rotate', default=False, action='store_true')
 parser.add_argument('--augment_mirror', default=False, action='store_true')
@@ -69,19 +72,16 @@ BN_DECAY_CLIP = 0.99
 
 if FLAGS.modelnet10:
     assert(NUM_POINT<=10000)
-    DATA_PATH = os.path.join(ROOT_DIR, '../dataset/modelnet40_normal_resampled')
+    DATA_PATH = '../data/modelnet40_normal_resampled'
     TRAIN_DATASET = modelnet_dataset.ModelNetDataset(root=DATA_PATH, npoints=NUM_POINT, split='train', normal_channel=False, modelnet10=FLAGS.modelnet10, batch_size=BATCH_SIZE)
     TEST_DATASET = modelnet_dataset.ModelNetDataset(root=DATA_PATH, npoints=NUM_POINT, split='test', normal_channel=False, modelnet10=FLAGS.modelnet10, batch_size=BATCH_SIZE)
 else:
     assert(NUM_POINT<=2048)
-    TRAIN_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, '../dataset/modelnet40_ply_hdf5_2048/train_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=True)
-    TEST_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, '../dataset/modelnet40_ply_hdf5_2048/test_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=False)
+    TRAIN_DATASET = modelnet_h5_dataset.ModelNetH5Dataset('../data/modelnet40_ply_hdf5_2048/train_files.txt', batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=True)
+    TEST_DATASET = modelnet_h5_dataset.ModelNetH5Dataset('../data/modelnet40_ply_hdf5_2048/test_files.txt', batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=False)
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
-os.system('cp models/%s.py %s/%s' % (MODEL_FILE, LOG_DIR, MODEL_FILE + '-%s.py'%(TIME)))
-os.system('cp main.py %s/main-%s.py' % (LOG_DIR,TIME))
-os.system('cp utils/unet_util.py %s/unet_util-%s.py' % (LOG_DIR,TIME))
 
 LOG_FOUT = open(os.path.join(LOG_DIR, 'log_train.txt'), 'w')
 LOG_RESULT_FOUT = open(os.path.join(LOG_DIR, 'log_result.csv'), 'w')

@@ -20,11 +20,11 @@ import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', type=int, default=0, help='GPU to use [default: GPU 0]')
-parser.add_argument('--model', default='model_l2h_msg', help='Model name [default: model]')
+parser.add_argument('--model', default='sanet_msg', help='Model name [default: model]')
 parser.add_argument('--log_dir', default='log', help='Log dir [default: log]')
 parser.add_argument('--num_point', type=int, default=2048, help='Point Number [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=500, help='Epoch to run [default: 201]')
-parser.add_argument('--batch_size', type=int, default=16, help='Batch Size during training [default: 32]')
+parser.add_argument('--batch_size', type=int, default=2, help='Batch Size during training [default: 32]')
 parser.add_argument('--learning_rate', type=float, default=0.005, help='Initial learning rate [default: 0.001]')
 parser.add_argument('--momentum', type=float, default=0.9, help='Initial learning rate [default: 0.9]')
 parser.add_argument('--optimizer', default='adam', help='adam or momentum [default: adam]')
@@ -49,9 +49,6 @@ LOG_DIR = FLAGS.log_dir
 if not os.path.exists(LOG_DIR): os.mkdir(LOG_DIR)
 if not os.path.exists(os.path.join(LOG_DIR, MODEL_NAME)): os.mkdir(os.path.join(LOG_DIR, MODEL_NAME))
 CURRENT_DIR = os.path.join(LOG_DIR, MODEL_NAME)
-MODEL_FILE = FLAGS.model+'.py'
-os.system('cp ../models/%s %s/%s/%s.py' % (MODEL_FILE, LOG_DIR, MODEL_NAME, MODEL_NAME)) # bkp of model def
-os.system('cp train_one_hot.py %s/%s/train_one_hot_%s.py' % (LOG_DIR, MODEL_NAME, MODEL_NAME)) # bkp of train procedure
 LOG_FOUT = open(os.path.join(LOG_DIR, MODEL_NAME, 'log_%s.csv' %(MODEL_NAME)), 'w')
 LOG_FOUT.write(str(FLAGS)+'\n')
 
@@ -148,7 +145,7 @@ def train():
         # Init variables
         init = tf.global_variables_initializer()
         sess.run(init)
-        #saver.restore(sess, '/data/wenxin/pointnet2/part_seg/log/unet_msg-0923_170203/epoch_189_0.8279_0.8567.ckpt')
+        saver.restore(sess, 'models/model.ckpt')
         #sess.run(init, {is_training_pl: True})
 
         ops = {'pointclouds_pl': pointclouds_pl,
@@ -163,8 +160,8 @@ def train():
                'end_points': end_points,
                'xyz_centers': xyz_centers}
 
-        mIoU_max = -1. 
         pIoU_max = -1.
+        #eval_one_epoch(sess, ops, test_writer)
         for epoch in range(MAX_EPOCH):
             print('**** EPOCH %03d ****' % (epoch))
             sys.stdout.flush()
@@ -173,9 +170,8 @@ def train():
             mIoU, pIoU = eval_one_epoch(sess, ops, test_writer)
 
 
-            if (mIoU > mIoU_max or pIoU > pIoU_max) and pIoU > 0.85:
-                save_path = saver.save(sess, os.path.join(CURRENT_DIR, 'epoch_%d_%.4f_%.4f.ckpt'%(epoch, mIoU, pIoU)))
-                mIoU_max = max(mIoU, mIoU_max)
+            if pIoU > pIoU_max and pIoU > 0.85:
+                save_path = saver.save(sess, os.path.join(CURRENT_DIR, 'model.ckpt'%(epoch, mIoU, pIoU)))
                 pIoU_max = max(pIoU, pIoU_max)
                 print("Model saved in file: %s" % save_path)
 

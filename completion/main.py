@@ -10,13 +10,12 @@ import transforms3d
 import numpy as np
 import tensorflow as tf
 import data_provider as dp
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join('../utils'))
+sys.path.append('../')
+sys.path.append('../utils')
 import provider
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', default='model_l2h', help='Model name [default: model_l2h]')
+parser.add_argument('--model', default='sanet', help='Model name [default: model_l2h]')
 parser.add_argument('--log_dir', default='logs', help='Log dir [default: logs]')
 parser.add_argument('--num_point', type=int, default=2048, help='Point Number [1024/2048] [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=400, help='Epoch to run [default: 400]')
@@ -28,7 +27,7 @@ parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate fo
 parser.add_argument('--weight_decay', type=float, default=0.0007, help='Weight decay [default: 0.007]')
 parser.add_argument('--warmup_step', type=int, default=1000, help='Warm up step for lr [default: 200000]')
 parser.add_argument('--gamma_cd', type=float, default=10.0, help='Gamma for chamfer loss [default: 10.0]')
-parser.add_argument('--restore', default='/data/litianyang/completion-wx/logs/model_l2h_0709-225618pcn_lk_continue/checkpoints', help='Restore path [default: None]')
+parser.add_argument('--restore', default='None', help='Restore path [default: None]')
 parser.add_argument('--augment_scale', type=float, default=0.0, help='Random scale, range 1.0/scale ~ scale [default: 0.0]')
 parser.add_argument('--augment_rotate', action='store_true')
 parser.add_argument('--augment_mirror', action='store_true')
@@ -65,13 +64,9 @@ BN_DECAY_DECAY_RATE = 0.5
 BN_DECAY_DECAY_STEP = float(DECAY_STEP)
 BN_DECAY_CLIP = 0.99
 
-DATA_CATEGORY = FLAGS.data_category
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
-os.system('cp %s.py %s/%s-%s.py' % (MODEL_FILE, LOG_DIR, MODEL_FILE,TIME))
-os.system('cp main.py %s/main-%s.py' % (LOG_DIR,TIME))
-os.system('cp pointnet_util.py %s/pointnet_util-%s.py' % (LOG_DIR,TIME))
 
 encode = {
     "chair": "03001627",
@@ -84,7 +79,7 @@ encode = {
     "watercraft": "04530566"
 }
 
-cat_list = ['plane','car','lamp','chair','table','cabinet','watercraft','sofa']
+cat_list = ['lamp']#['plane','car','lamp','chair','table','cabinet','watercraft','sofa']
 
 TRAIN_DATASET = []
 TRAIN_DATASET_GT = []
@@ -92,9 +87,9 @@ TEST_DATASET = []
 TEST_DATASET_GT = []
 TEST_DATASET_LABEL = []
 
-for idx, DATA_CATEGORY in enumerate(cat_list):
-    DATA_PATH = os.path.join('../data/shapenet_completion', DATA_CATEGORY)
-    TRAIN_DATASET_, TRAIN_DATASET_GT_, TEST_DATASET_, TEST_DATASET_GT_ = dp.load_completion_data(DATA_PATH, BATCH_SIZE, encode[DATA_CATEGORY], npoint=NUM_POINT)
+for idx, cat in enumerate(cat_list):
+    DATA_PATH = os.path.join('../data/shapenet_completion', cat)
+    TRAIN_DATASET_, TRAIN_DATASET_GT_, TEST_DATASET_, TEST_DATASET_GT_ = dp.load_completion_data(DATA_PATH, BATCH_SIZE, encode[cat], npoint=NUM_POINT)
     TRAIN_DATASET.append(TRAIN_DATASET_)
     TRAIN_DATASET_GT.append(TRAIN_DATASET_GT_)
     TEST_DATASET.append(TEST_DATASET_)
