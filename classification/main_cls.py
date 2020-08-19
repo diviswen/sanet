@@ -12,9 +12,7 @@ import modelnet_dataset
 import modelnet_h5_dataset
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
-sys.path.append(os.path.join(ROOT_DIR, 'models'))
-import provider
+sys.path.append('../utils')
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 
@@ -71,13 +69,13 @@ BN_DECAY_CLIP = 0.99
 
 if FLAGS.modelnet10:
     assert(NUM_POINT<=10000)
-    DATA_PATH = os.path.join(ROOT_DIR, 'data/modelnet40_normal_resampled')
+    DATA_PATH = os.path.join(ROOT_DIR, '../dataset/modelnet40_normal_resampled')
     TRAIN_DATASET = modelnet_dataset.ModelNetDataset(root=DATA_PATH, npoints=NUM_POINT, split='train', normal_channel=False, modelnet10=FLAGS.modelnet10, batch_size=BATCH_SIZE)
     TEST_DATASET = modelnet_dataset.ModelNetDataset(root=DATA_PATH, npoints=NUM_POINT, split='test', normal_channel=False, modelnet10=FLAGS.modelnet10, batch_size=BATCH_SIZE)
 else:
     assert(NUM_POINT<=2048)
-    TRAIN_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/train_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=True)
-    TEST_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/test_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=False)
+    TRAIN_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, '../dataset/modelnet40_ply_hdf5_2048/train_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=True)
+    TEST_DATASET = modelnet_h5_dataset.ModelNetH5Dataset(os.path.join(BASE_DIR, '../dataset/modelnet40_ply_hdf5_2048/test_files.txt'), batch_size=BATCH_SIZE, npoints=NUM_POINT, shuffle=False)
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)

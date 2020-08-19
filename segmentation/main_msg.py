@@ -65,7 +65,7 @@ HOSTNAME = socket.gethostname()
 NUM_CLASSES = 50
 
 # Shapenet official train/test split
-DATA_PATH = os.path.join(ROOT_DIR, 'data', 'shapenetcore_partanno_segmentation_benchmark_v0_normal')
+DATA_PATH = os.path.join('../data', 'shapenetcore_partanno_segmentation_benchmark_v0_normal')
 TRAIN_DATASET = part_dataset_all_normal.PartNormalDataset(root=DATA_PATH, npoints=NUM_POINT, classification=False, split='trainval', return_cls_label=True)
 TEST_DATASET = part_dataset_all_normal.PartNormalDataset(root=DATA_PATH, npoints=NUM_POINT, classification=False, split='test', return_cls_label=True)
 

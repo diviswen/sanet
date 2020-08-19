@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+sys.path.append('../utils')
 import numpy as np
 import tensorflow as tf
 import pointnet_util as pu

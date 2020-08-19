@@ -1,7 +1,11 @@
+import os
+import sys
+sys.path.append('../')
+sys.path.append('../utils')
 import numpy as np
 import tensorflow as tf
 import pointnet_util as pu
-from utils import tf_util
+import tf_util
 
 
 def placeholder_inputs(batch_size, num_point, num_point_gt):

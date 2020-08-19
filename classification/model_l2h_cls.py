@@ -1,12 +1,12 @@
+import os
 import numpy as np
 import tensorflow as tf
-import extra_util as pu
-import tf_util
 import sys
-from pointnet_util import pointnet_sa_module, pointnet_sa_module_msg
 BASE_DIR = os.path.dirname(__file__)
 sys.path.append(BASE_DIR)
 sys.path.append(os.path.join(BASE_DIR, '../utils'))
+import tf_util
+import pointnet_util as pu
 
 def placeholder_inputs(batch_size, num_point, num_point_gt):
     pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, 3))

@@ -12,7 +12,7 @@ import tensorflow as tf
 import data_provider as dp
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
+sys.path.append(os.path.join('../utils'))
 import provider
 
 parser = argparse.ArgumentParser()
@@ -93,7 +93,7 @@ TEST_DATASET_GT = []
 TEST_DATASET_LABEL = []
 
 for idx, DATA_CATEGORY in enumerate(cat_list):
-    DATA_PATH = os.path.join('data/shapenet_completion', DATA_CATEGORY)
+    DATA_PATH = os.path.join('../data/shapenet_completion', DATA_CATEGORY)
     TRAIN_DATASET_, TRAIN_DATASET_GT_, TEST_DATASET_, TEST_DATASET_GT_ = dp.load_completion_data(DATA_PATH, BATCH_SIZE, encode[DATA_CATEGORY], npoint=NUM_POINT)
     TRAIN_DATASET.append(TRAIN_DATASET_)
     TRAIN_DATASET_GT.append(TRAIN_DATASET_GT_)
