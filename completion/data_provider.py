@@ -87,8 +87,8 @@ def load_completion_data(path, batch_size, encode, npoint=2048):
         test_batch_dataset.append(test_dataset[i:i+batch_size])
         test_batch_dataset_gt.append(test_dataset_gt[i:i+batch_size])
         i = i + batch_size
-    batch_dataset = np.array(batch_dataset)*0.9
-    batch_dataset_gt = np.array(batch_dataset_gt)*0.9
+    batch_dataset = np.array(batch_dataset)
+    batch_dataset_gt = np.array(batch_dataset_gt)
     test_batch_dataset = np.array(test_batch_dataset)
     test_batch_dataset_gt = np.array(test_batch_dataset_gt)
     return batch_dataset, batch_dataset_gt, test_batch_dataset, test_batch_dataset_gt
