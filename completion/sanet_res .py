@@ -6,7 +6,6 @@ import tensorflow as tf
 import pointnet_util as pu
 from utils import tf_util
 
-
 def placeholder_inputs(batch_size, num_point, num_point_gt):
     pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, 3))
     pointclouds_gt = tf.placeholder(tf.float32, shape=(batch_size, num_point_gt, 3))
@@ -36,59 +35,72 @@ def get_model(point_clouds, is_training, bn_decay=None, weight_decay=None):
     l0_xyz = point_clouds
     l0_points = None
     # layer1: (batch_size, 256, 128)
-    l1_xyz, l1_points, _ = pu.pointnet_sa_module_decay(l0_xyz, l0_points, npoint=512, radius=None, nsample=16, mlp=[64, 128], mlp2=None,
+    l1_xyz, l1_points, _ = pu.pointnet_sa_module(l0_xyz, l0_points, npoint=512, radius=None, nsample=16, mlp=[64, 128, 512], mlp2=None,
                                                  group_all=False, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay,
                                                  scope='layer1', knn=True)
     # layer2: (batch_size, 64, 256)
-    l2_xyz, l2_points, _ = pu.pointnet_sa_module_decay(l1_xyz, l1_points, npoint=256, radius=None, nsample=8, mlp=[128, 256], mlp2=None,
+    l2_xyz, l2_points, _ = pu.pointnet_sa_module(l1_xyz, l1_points, npoint=256, radius=None, nsample=8, mlp=[256, 256, 512], mlp2=None,
                                                  group_all=False, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay,
                                                  scope='layer2', knn=True)
     # layer3: (batch_size, 1, 512)
-    l3_xyz, l3_points, _ = pu.pointnet_sa_module_decay(l2_xyz, l2_points, npoint=None, radius=None, nsample=None, mlp=[256,512], mlp2=None,
+    l3_xyz, l3_points, _ = pu.pointnet_sa_module(l2_xyz, l2_points, npoint=None, radius=None, nsample=None, mlp=[256, 512, 1024], mlp2=None,
                                                  group_all=True, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay,
                                                  scope='layer3', knn=True)
 
-    # layer4: (batch_size, 16, 514)
-    l4_points = tf.tile(l3_points, [1, 16, 1])
-    x = pu.add_2d_grid_tile(l4_points, grid_44_16, 4, 4, scope='add_grid_4x4')
+    l4_points = tf.tile(l3_points, [1, 8, 1])
+    x = pu.add_2d_grid(l4_points, grid_44_16, 2, 4, scope='add_grid_4x4')
     x = tf_util.conv1d(x, 256, kernel_size=1, stride=1, scope='upsample_conv3', bn=True, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
     x = tf_util.conv1d(x, 128, kernel_size=1, stride=1, scope='upsample_conv2', bn=True, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
     x = tf_util.conv1d(x, 3, kernel_size=1, stride=1, scope='upsample_conv0', bn=False, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay, activation_fn=None)
+
     l4_points = tf.concat([l4_points,x], -1)
-    lk_points = tf_util.conv1d(l4_points, 512, 1, stride=1, scope='layer5_conv', bn=True, bn_decay=bn_decay,
-                               weight_decay=weight_decay, is_training=is_training)
+
     # Note: if using up_down_up_folding, hand-crafted gird (grid_88_64) will be ignored, and the
     # model will auto-matically generate grid for convenience. If you want to use hand-crafted grid, please call up_down_up_folding_tile.
-    lk_points = pu.up_down_up_folding(lk_points, 2, grid_88_64, 4, 8, scope='layer5_up_down_up', bn_decay=bn_decay,
-                              weight_decay=weight_decay, is_training=is_training)
-
-
-    # layer5: (batch_size, 128, 256)
-    l5_points = tf_util.conv1d(lk_points, 256, 1, stride=1, scope='layerk_conv', bn=True, bn_decay=bn_decay,
+    #layerk: (bsize, 16, 512)
+    lk_points = tf_util.conv1d(l4_points, 512, 1, stride=1, scope='layerk_conv', bn=True, bn_decay=bn_decay,
                                weight_decay=weight_decay, is_training=is_training)
-    l5_points = pu.attention(l2_points, l5_points, scope='layerk_attention', bn_decay=bn_decay,
-                             weight_decay=weight_decay, is_training=is_training)
-    l5_points = pu.up_down_up_folding(l5_points, 4, grid_88_64, 8, 16, scope='layerk_up_down_up', bn_decay=bn_decay,
+    lk_points = pu.up_down_up_folding(lk_points, 4, grid_88_64, 4, 8, scope='layerk_up_down_up', bn_decay=bn_decay,
                               weight_decay=weight_decay, is_training=is_training)
 
-    # layer6: (batch_size, 512, 128)
-    l6_points = tf_util.conv1d(l5_points, 128, 1, stride=1, scope='layer6_conv', bn=True, bn_decay=bn_decay,
+    # layer5: (batch_size, 32, 256)
+    l5_points = tf_util.conv1d(lk_points, 512, 1, stride=1, scope='layer5_conv', bn=True, bn_decay=bn_decay,
+                               weight_decay=weight_decay, is_training=is_training)
+    l5_points = pu.attention(l2_points, l5_points, scope='layer5_attention', bn_decay=bn_decay,
+                             weight_decay=weight_decay, is_training=is_training)
+    l5_points = pu.up_down_up_folding(l5_points, 4, grid_88_64, 8, 16, scope='layer5_up_down_up', bn_decay=bn_decay,
+                              weight_decay=weight_decay, is_training=is_training)
+    lk_points = tf.tile(lk_points, [1,4,1])
+    l5_points = tf.concat([l5_points, lk_points], -1)
+    l5_points = tf_util.conv1d(l5_points, 256, 1, stride=1, scope='layer5_conv_out', bn=True, bn_decay=bn_decay,
+                               weight_decay=weight_decay, is_training=is_training)
+
+    # layer6: (batch_size, 128, 128)
+    l6_points = tf_util.conv1d(l5_points, 512, 1, stride=1, scope='layer6_conv', bn=True, bn_decay=bn_decay,
                                weight_decay=weight_decay, is_training=is_training)
     l6_points = pu.attention(l1_points, l6_points, scope='layer6_attention', bn_decay=bn_decay,
                              weight_decay=weight_decay, is_training=is_training)
     l6_points = pu.up_down_up_folding(l6_points, 4, grid_1616_256, 16, 32, scope='layer6_up_down_up', bn_decay=bn_decay,
                               weight_decay=weight_decay, is_training=is_training)
+    l5_points = tf.tile(l5_points, [1,4,1])
+    l6_points = tf.concat([l6_points, l5_points], -1)
+    l6_points = tf_util.conv1d(l6_points, 256, 1, stride=1, scope='layer6_conv_out', bn=True, bn_decay=bn_decay,
+                           weight_decay=weight_decay, is_training=is_training)
 
-    # layer7: (batch_size, 2048, 128)
-    l7_points = tf_util.conv1d(l6_points, 128, 1, stride=1, scope='layer7_conv', bn=True, bn_decay=bn_decay,
+
+    # layer7: (batch_size, 512, 128)
+    l7_points = tf_util.conv1d(l6_points, 512, 1, stride=1, scope='layer7_conv', bn=True, bn_decay=bn_decay,
                                weight_decay=weight_decay, is_training=is_training)
     l7_points = pu.up_down_up_folding(l7_points, 4, grid_final, 32, 64, scope='layer7_up_down_up', bn_decay=bn_decay,
                               weight_decay=weight_decay, is_training=is_training)
+    l6_points = tf.tile(l6_points, [1,4,1])
+    l7_points = tf.concat([l7_points, l6_points], -1)
+
 
     # pointclouds_pred: (batch_size, 2048, 3)
-    pointclouds_pred = tf_util.conv1d(l7_points, 128, 1, stride=1, scope='pred_conv1', bn=True,
+    pointclouds_pred = tf_util.conv1d(l7_points, 256, 1, stride=1, scope='pred_conv1', bn=True,
                                       bn_decay=bn_decay, weight_decay=weight_decay, is_training=is_training)
-    pointclouds_pred = tf_util.conv1d(pointclouds_pred, 16, 1, stride=1, scope='pred_conv2', bn=True,
+    pointclouds_pred = tf_util.conv1d(pointclouds_pred, 128, 1, stride=1, scope='pred_conv2', bn=True,
                                       bn_decay=bn_decay, weight_decay=weight_decay, is_training=is_training)
     pointclouds_pred = tf_util.conv1d(pointclouds_pred, 3, 1, stride=1, scope='pred_conv3', bn=False,
                                       weight_decay=weight_decay, is_training=is_training, activation_fn=tf.tanh)
@@ -100,3 +112,22 @@ def get_loss(pointclouds_pred, pointclouds_gt):
     repulsion_loss = pu.get_repulsion_loss(pointclouds_pred)
     chamfer_loss = pu.get_chamfer_loss(pointclouds_pred, pointclouds_gt)
     return emd_loss, repulsion_loss, chamfer_loss
+
+
+def mlp(features, layer_dims, is_training, bn=None):
+    for i, num_outputs in enumerate(layer_dims[:-1]):
+        features = tf.contrib.layers.fully_connected(
+            features, num_outputs,
+            activation_fn=None,
+            normalizer_fn=None,
+            scope='fc_%d' % i)
+        if bn:
+            with tf.variable_scope('fc_bn_%d' % (i), reuse=tf.AUTO_REUSE):
+                features = tf.layers.batch_normalization(features, training=is_training)
+        features = tf.nn.relu(features, 'fc_relu_%d' % i)
+
+    outputs = tf.contrib.layers.fully_connected(
+        features, layer_dims[-1],
+        activation_fn=None,
+        scope='fc_%d' % (len(layer_dims) - 1))
+    return outputs
